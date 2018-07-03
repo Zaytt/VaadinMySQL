@@ -1,24 +1,23 @@
 package com.example.VaadinMySQL.model;
 
+
 public class Customer {
 
     private Long id;
     private String firstName;
     private String lastName;
     private String email;
-    private String address;
-    private boolean isActive;
+    private int isActive;
     private String joinDate;
 
     public Customer() {
     }
 
-    public Customer(Long id, String firstName, String lastName, String email, boolean isActive, String joinDate) {
+    public Customer(Long id, String firstName, String lastName, String email, String joinDate) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
-        this.isActive = isActive;
         this.joinDate = joinDate;
     }
 
@@ -54,19 +53,27 @@ public class Customer {
         this.email = email;
     }
 
-    public boolean isActive() {
-        return isActive;
-    }
-
-    public void setActive(boolean active) {
-        isActive = active;
-    }
-
     public String getJoinDate() {
         return joinDate;
     }
 
     public void setJoinDate(String joinDate) {
         this.joinDate = joinDate;
+    }
+
+    public boolean isPersisted() {
+        return id != null;
+    }
+
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                ", isActive=" + isActive +
+                ", joinDate='" + joinDate + '\'' +
+                '}';
     }
 }

@@ -1,12 +1,10 @@
 package com.example.VaadinMySQL.ui;
 
 import com.example.VaadinMySQL.model.Customer;
-import com.example.VaadinMySQL.service.CustomerService;
 import com.vaadin.data.Binder;
 import com.vaadin.event.ShortcutAction;
 import com.vaadin.ui.*;
 import com.vaadin.ui.themes.ValoTheme;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 
 public class CustomerForm extends com.vaadin.ui.FormLayout{
@@ -69,9 +67,24 @@ public class CustomerForm extends com.vaadin.ui.FormLayout{
     }
 
     private void save() {
-        myUI.getCustomerService().save(customer);
+        if(customer.isPersisted())
+            this.update();
+        else
+            this.add();
+    }
+
+    private void add(){
+        myUI.getCustomerService().add(customer);
         myUI.showMessage("Customer added","Added new customer: "
-                                 + customer.getFirstName() + " " + customer.getLastName());
+                + customer.getFirstName() + " " + customer.getLastName());
+        myUI.clearFilter();
+        myUI.updateGrid();
+        setVisible(false);
+    }
+
+    private void update(){
+        myUI.getCustomerService().update(customer);
+        myUI.showMessage("Customer updated",customer.getFirstName()+" "+customer.getLastName());
         myUI.clearFilter();
         myUI.updateGrid();
         setVisible(false);

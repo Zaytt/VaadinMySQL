@@ -80,9 +80,8 @@ public class VaadinUI extends UI {
         if (customerGrid.asSingleSelect().isEmpty()) {
             form.setVisible(false);
         } else {
-
             form.setCustomer(customerGrid.asSingleSelect().getValue());
-            form.setVisible(true);
+            form.show();
         }
     }
 

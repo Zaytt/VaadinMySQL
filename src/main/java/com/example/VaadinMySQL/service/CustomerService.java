@@ -38,9 +38,9 @@ public class CustomerService {
     public List<Customer> findAll(String filter) {
         return namedTemplate.query(
                 "SELECT * FROM customer " +
-                        "WHERE first_name LIKE :filter OR last_name LIKE :filter",
+                        "WHERE CONCAT(customer.first_name, ' ', customer.last_name) LIKE :filter",
                 new MapSqlParameterSource()
-                        .addValue("filter", filter+"%"),
+                        .addValue("filter", "%"+filter.trim()+"%"),
                 (rs, rowNum) -> new Customer(
                         rs.getLong("customer_id"),
                         rs.getString("first_name"),
@@ -51,7 +51,7 @@ public class CustomerService {
 
 
 
-    public void save(Customer customer){
+    public void add(Customer customer){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         Date date = new Date();
         String currentDate = sdf.format(date);
@@ -71,7 +71,6 @@ public class CustomerService {
                 "UPDATE customer SET   first_name=:first_name, " +
                                             "last_name=:last_name, " +
                                             "email=:email, " +
-                                            "active=:active, " +
                                             "create_date=:create_date " +
                         "WHERE customer_id=:id",
                 new HashMap() {{

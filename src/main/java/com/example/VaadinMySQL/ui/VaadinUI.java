@@ -5,6 +5,7 @@ import com.example.VaadinMySQL.service.CustomerService;
 import com.vaadin.annotations.Theme;
 import com.vaadin.data.Binder;
 import com.vaadin.icons.VaadinIcons;
+import com.vaadin.server.Page;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.spring.annotation.SpringUI;
@@ -72,6 +73,9 @@ public class VaadinUI extends UI {
         return customerGrid;
     }
 
+    /**
+     * Sets the customer property from the CustomerForm object to the one selected in the grid
+     */
     private void selectRow() {
         if (customerGrid.asSingleSelect().isEmpty()) {
             form.setVisible(false);
@@ -79,11 +83,16 @@ public class VaadinUI extends UI {
 
             form.setCustomer(customerGrid.asSingleSelect().getValue());
             form.setVisible(true);
-            System.out.println("Customer in grid = " + customerGrid.asSingleSelect().getValue().toString());
-            System.out.println("Customer in form = " + form.getCustomer().toString());
         }
     }
 
+    /**
+     * Builds a toolbar that contains:
+     * Text field for filtering
+     * Button for clearing the filter
+     * Button for adding a new element to the grid
+     * @return The built toolbar as an horizontal layout
+     */
     private HorizontalLayout buildToolbar(){
         //Set the text field as filter
         filterField.setPlaceholder("Filter by name...");
@@ -93,13 +102,14 @@ public class VaadinUI extends UI {
         //Add clear button next to the text field
         Button clearFilterButton = new Button(VaadinIcons.CLOSE);
         clearFilterButton.setDescription("Clear the current filter");
-        clearFilterButton.addClickListener(e -> filterField.clear());
+        clearFilterButton.addClickListener(e -> clearFilter());
 
         // Add add customer button
         Button addCustomerButton = new Button("Add new customer");
         addCustomerButton.addClickListener(event -> {
             customerGrid.asSingleSelect().clear();
             form.setCustomer(new Customer());
+            form.show();
         });
 
         // Create a CSS Layout
@@ -114,12 +124,34 @@ public class VaadinUI extends UI {
     }
 
     public void updateGrid() {
-        List<Customer> customers = customerService.findAll();
+        List<Customer> customers = customerService.findAll(this.filterField.getValue());
         customerGrid.setItems(customers);
     }
 
     public CustomerService getCustomerService() {
         return customerService;
+    }
+
+    public void setFilterFieldText(String text){
+        this.filterField.setValue(text);
+    }
+
+    public void clearFilter(){
+        this.filterField.clear();
+    }
+
+    public void showError(String caption, String description){
+        new Notification(caption,
+                description,
+                Notification.Type.ERROR_MESSAGE, true)
+                .show(Page.getCurrent());
+    }
+
+    public void showMessage(String caption, String description){
+        new Notification(caption,
+                description,
+                Notification.Type.TRAY_NOTIFICATION, true)
+                .show(Page.getCurrent());
     }
 
 }

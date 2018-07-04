@@ -7,6 +7,7 @@ import com.vaadin.event.ShortcutAction;
 import com.vaadin.ui.*;
 import com.vaadin.ui.themes.ValoTheme;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 
 public class CustomerForm extends com.vaadin.ui.FormLayout{
 
@@ -37,15 +38,18 @@ public class CustomerForm extends com.vaadin.ui.FormLayout{
         binder.bindInstanceFields(this);
     }
 
-    public void setCustomer(Customer customer) {
-        this.customer = customer;
-        binder.setBean(customer);
-
+    public void show(){
         // Show delete button for only customers already in the database
-        delete.setVisible(customer.isPersisted());
+        this.delete.setVisible(customer.isPersisted());
+        //Switch between 'Save' & 'Update' depending if the Customer is already in the database
+        this.switchSaveButtonCaption(customer.isPersisted());
 
         setVisible(true);
         firstName.selectAll();
+    }
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
+        binder.setBean(customer);
     }
 
     public Customer getCustomer(){
@@ -53,18 +57,31 @@ public class CustomerForm extends com.vaadin.ui.FormLayout{
     }
 
     private void delete() {
-        //TODO show an alert when trying to delete, DataIntegrityException
-        myUI.getCustomerService().delete(customer);
+        try {
+            myUI.getCustomerService().delete(customer);
+        } catch (DataIntegrityViolationException e) {
+            this.myUI.showError("Cannot Delete",
+                    "Can't delete customers when they are referenced in other tables.");
+        }
+        myUI.clearFilter();
         myUI.updateGrid();
         setVisible(false);
     }
 
-    //TODO switch between save and update a Customer
     private void save() {
-        //TODO show a message that customer was added
         myUI.getCustomerService().save(customer);
+        myUI.showMessage("Customer added","Added new customer: "
+                                 + customer.getFirstName() + " " + customer.getLastName());
+        myUI.clearFilter();
         myUI.updateGrid();
         setVisible(false);
+    }
+
+    public void switchSaveButtonCaption(Boolean persisted){
+        if(persisted)
+            this.save.setCaption("Update");
+        else
+            this.save.setCaption("Save");
     }
 }
 

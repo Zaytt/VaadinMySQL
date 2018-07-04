@@ -1,10 +1,13 @@
 package com.example.VaadinMySQL.service;
 
 import com.example.VaadinMySQL.model.Customer;
+import com.vaadin.server.Page;
+import com.vaadin.ui.Notification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -31,6 +34,22 @@ public class CustomerService {
                         rs.getString("email"),
                         rs.getString("create_date")));
     }
+
+    public List<Customer> findAll(String filter) {
+        return namedTemplate.query(
+                "SELECT * FROM customer " +
+                        "WHERE first_name LIKE :filter OR last_name LIKE :filter",
+                new MapSqlParameterSource()
+                        .addValue("filter", filter+"%"),
+                (rs, rowNum) -> new Customer(
+                        rs.getLong("customer_id"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("email"),
+                        rs.getString("create_date")));
+    }
+
+
 
     public void save(Customer customer){
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -65,9 +84,11 @@ public class CustomerService {
 
     }
 
-    public void delete(Customer customer){
-        jdbcTemplate.update("DELETE FROM customer " +
-                                 "WHERE customer_id = ?",
-                customer.getId());
+    public void delete(Customer customer) throws DataIntegrityViolationException{
+        namedTemplate.update("DELETE FROM customer " +
+                                 "WHERE customer_id = :id",
+                new MapSqlParameterSource()
+                        .addValue("id", customer.getId()));
     }
+
 }

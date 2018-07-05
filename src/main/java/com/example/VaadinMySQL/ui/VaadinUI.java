@@ -2,9 +2,9 @@ package com.example.VaadinMySQL.ui;
 
 import com.example.VaadinMySQL.model.Customer;
 import com.example.VaadinMySQL.service.CustomerService;
+import com.example.VaadinMySQL.service.PDFService;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.Page;
-import com.vaadin.server.Resource;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.spring.annotation.SpringUI;
@@ -12,6 +12,7 @@ import com.vaadin.ui.*;
 import com.vaadin.ui.themes.ValoTheme;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.IOException;
 import java.util.List;
 
 @SpringUI
@@ -121,7 +122,7 @@ public class VaadinUI extends UI {
         pdfButton.setIcon(VaadinIcons.FILE_TEXT_O);
         pdfButton.setStyleName("danger");
         pdfButton.addClickListener(event -> {
-            //TODO function to print a PDF Report
+            this.printPDF();
         });
 
         // Add a generate excel file button
@@ -167,6 +168,12 @@ public class VaadinUI extends UI {
         this.filterField.clear();
     }
 
+    /**
+     * Prints a red error message in the center of the screen.
+     * Must be closed by the user.
+     * @param caption the title of the message
+     * @param description the contents of the message box
+     */
     public void showError(String caption, String description){
         new Notification(caption,
                 description,
@@ -174,11 +181,37 @@ public class VaadinUI extends UI {
                 .show(Page.getCurrent());
     }
 
+    /**
+     * Prints a message in the bottom left corner of the screen.
+     * Lasts for 3 seconds.
+     * @param caption the title of the message
+     * @param description the contents of the message box
+     */
     public void showMessage(String caption, String description){
         new Notification(caption,
                 description,
                 Notification.Type.TRAY_NOTIFICATION, true)
                 .show(Page.getCurrent());
+    }
+
+    private void printPDF() {
+        //Define a PDFService that uses the Customer class
+        PDFService<Customer> pdfService = new PDFService<>();
+        //Define the arrays to print
+        String[] headerArray = {"First Name", "Last Name", "Email", "Join Date"};
+        //Define their width
+        float[] headerWidth = {1, 1, 1, 1};
+        //Get the data
+        List<Customer> customers =  customerService.findAll();
+        //And print! :)
+        try {
+            pdfService.printTablePDF("reports/customers.pdf", headerArray, headerWidth, customers);
+            showMessage("PDF Printed", "The PDF was printed successfully");
+        } catch (IOException e) {
+            e.printStackTrace();
+            showError("PDF Error","Couldn't print PDF report. Please try again. " +
+                                                     "If problem persists, please contact support.");
+        }
     }
 
 }

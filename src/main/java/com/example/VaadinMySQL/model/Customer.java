@@ -1,16 +1,19 @@
 package com.example.VaadinMySQL.model;
 
 
-public class Customer {
+import com.example.VaadinMySQL.model.reports.Reportable;
+
+import java.util.ArrayList;
+
+public class Customer extends Reportable {
 
     private Long id;
     private String firstName;
     private String lastName;
     private String email;
-    private int isActive;
     private String joinDate;
 
-    public Customer() {
+    public Customer(){
     }
 
     public Customer(Long id, String firstName, String lastName, String email, String joinDate) {
@@ -66,14 +69,26 @@ public class Customer {
     }
 
     @Override
+    public ArrayList<String> toStringArray() {
+        ArrayList<String> stringArrayList = new ArrayList<>();
+        stringArrayList.add(this.firstName);
+        stringArrayList.add(this.lastName);
+        stringArrayList.add(this.email);
+        stringArrayList.add(this.joinDate);
+
+        return stringArrayList;
+    }
+
+    @Override
     public String toString() {
         return "Customer{" +
                 "id=" + id +
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
-                ", isActive=" + isActive +
                 ", joinDate='" + joinDate + '\'' +
                 '}';
     }
+
+
 }

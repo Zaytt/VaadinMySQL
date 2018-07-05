@@ -2,10 +2,9 @@ package com.example.VaadinMySQL.ui;
 
 import com.example.VaadinMySQL.model.Customer;
 import com.example.VaadinMySQL.service.CustomerService;
-import com.vaadin.annotations.Theme;
-import com.vaadin.data.Binder;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.Page;
+import com.vaadin.server.Resource;
 import com.vaadin.server.VaadinRequest;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.spring.annotation.SpringUI;
@@ -32,26 +31,16 @@ public class VaadinUI extends UI {
 
     @Override
     protected void init(VaadinRequest request) {
-        Layout layout = buildMainLayout();
+        Layout layout = buildUI();
         setContent(layout);
     }
 
-    private Layout buildMainLayout(){
+    private Layout buildUI(){
         //Create the general vertical layout of the UI
         final VerticalLayout layout = new VerticalLayout();
 
-        //Create the components of the grid
-        buildGrid();
-        buildToolbar();
-
-        //Add the form and grid to the layout
-        HorizontalLayout main = new HorizontalLayout(customerGrid, form);
-        main.setSizeFull();
-        customerGrid.setSizeFull();
-        main.setExpandRatio(customerGrid, 1);
-
-        //Combine the main grid and form with the toolbar
-        layout.addComponents(toolbar, main);
+        //Add the components to the layout
+        layout.addComponents(buildTopToolbar(), buildMainLayout(), buildBottomToolBar());
 
         // fetch list of Customers from service and assign it to Grid
         this.updateGrid();
@@ -59,6 +48,21 @@ public class VaadinUI extends UI {
         form.setVisible(false);
 
         return layout;
+    }
+
+    private HorizontalLayout buildMainLayout(){
+        //Build the grid
+        buildGrid();
+
+        //Add the form and grid to the layout
+        HorizontalLayout main = new HorizontalLayout(customerGrid, form);
+
+        //Configure the grid and layout size
+        main.setSizeFull();
+        customerGrid.setSizeFull();
+        main.setExpandRatio(customerGrid, 1);
+
+        return main;
     }
 
     /**
@@ -74,25 +78,13 @@ public class VaadinUI extends UI {
     }
 
     /**
-     * Sets the customer property from the CustomerForm object to the one selected in the grid
-     */
-    private void selectRow() {
-        if (customerGrid.asSingleSelect().isEmpty()) {
-            form.setVisible(false);
-        } else {
-            form.setCustomer(customerGrid.asSingleSelect().getValue());
-            form.show();
-        }
-    }
-
-    /**
      * Builds a toolbar that contains:
      * Text field for filtering
      * Button for clearing the filter
      * Button for adding a new element to the grid
      * @return The built toolbar as an horizontal layout
      */
-    private HorizontalLayout buildToolbar(){
+    private HorizontalLayout buildTopToolbar(){
         //Set the text field as filter
         filterField.setPlaceholder("Filter by name...");
         filterField.addValueChangeListener(e -> updateGrid());
@@ -104,7 +96,8 @@ public class VaadinUI extends UI {
         clearFilterButton.addClickListener(e -> clearFilter());
 
         // Add add customer button
-        Button addCustomerButton = new Button("Add new customer");
+        Button addCustomerButton = new Button("New customer");
+        addCustomerButton.setIcon(VaadinIcons.PLUS_CIRCLE_O);
         addCustomerButton.addClickListener(event -> {
             customerGrid.asSingleSelect().clear();
             form.setCustomer(new Customer());
@@ -113,13 +106,48 @@ public class VaadinUI extends UI {
 
         // Create a CSS Layout
         CssLayout filteringLayout = new CssLayout();
-        filteringLayout.addComponents(filterField, clearFilterButton);
+        filteringLayout.addComponents(filterField, clearFilterButton, addCustomerButton);
         filteringLayout.setStyleName(ValoTheme.LAYOUT_COMPONENT_GROUP);
 
         // Make the toolbar
-        this.toolbar = new HorizontalLayout(filteringLayout, addCustomerButton);
+        this.toolbar = new HorizontalLayout(filteringLayout);
 
         return this.toolbar;
+    }
+
+    private HorizontalLayout buildBottomToolBar(){
+        // Add a print pdf button
+        Button pdfButton = new Button("PDF");
+        pdfButton.setIcon(VaadinIcons.FILE_TEXT_O);
+        pdfButton.setStyleName("danger");
+        pdfButton.addClickListener(event -> {
+            //TODO function to print a PDF Report
+        });
+
+        // Add a generate excel file button
+        Button excelButton = new Button("Excel");
+        excelButton.setIcon(VaadinIcons.FILE_TABLE);
+        excelButton.setStyleName("friendly");
+        excelButton.addClickListener(event -> {
+            //TODO function to print an Excel file
+        });
+
+        // Make the toolbar
+        HorizontalLayout bottomToolbar = new HorizontalLayout(pdfButton, excelButton);
+
+        return bottomToolbar;
+    }
+
+    /**
+     * Sets the customer property from the CustomerForm object to the one selected in the grid
+     */
+    private void selectRow() {
+        if (customerGrid.asSingleSelect().isEmpty()) {
+            form.setVisible(false);
+        } else {
+            form.setCustomer(customerGrid.asSingleSelect().getValue());
+            form.show();
+        }
     }
 
     public void updateGrid() {

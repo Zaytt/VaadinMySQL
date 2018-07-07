@@ -4,15 +4,21 @@ import com.example.VaadinMySQL.model.Customer;
 import com.example.VaadinMySQL.service.CustomerService;
 import com.example.VaadinMySQL.service.PDFService;
 import com.vaadin.icons.VaadinIcons;
-import com.vaadin.server.Page;
-import com.vaadin.server.VaadinRequest;
+import com.vaadin.server.*;
 import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.spring.annotation.SpringUI;
 import com.vaadin.ui.*;
 import com.vaadin.ui.themes.ValoTheme;
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @SpringUI
@@ -121,9 +127,7 @@ public class VaadinUI extends UI {
         Button pdfButton = new Button("PDF");
         pdfButton.setIcon(VaadinIcons.FILE_TEXT_O);
         pdfButton.setStyleName("danger");
-        pdfButton.addClickListener(event -> {
-            this.printPDF();
-        });
+        pdfButton.addClickListener(event -> this.printPDF());
 
         // Add a generate excel file button
         Button excelButton = new Button("Excel");
@@ -194,24 +198,84 @@ public class VaadinUI extends UI {
                 .show(Page.getCurrent());
     }
 
+
+    /**
+     * Calls the required methods to build and print a pdf file
+     */
+
     private void printPDF() {
+        // preparing the data an calling the method to turn it into a byte array
+        byte[] toPrint = new byte[0];
+        try {
+            toPrint = preparePDF();
+        } catch (IOException e) {
+            e.printStackTrace();
+            showError("PDF Error","Couldn't print PDF report. Please try again. " +
+                    "If problem persists, please contact support.");
+        }
+        // toPrint has the data containing the pdf file
+        downloadExportFile(toPrint);
+    }
+
+    /**
+     * Builds a PDF file and returns it as a byte array
+     * @return
+     * @throws IOException
+     */
+    private byte[] preparePDF() throws IOException {
+        //Set file destination
+        String destination = "reports/customers.pdf";
         //Define a PDFService that uses the Customer class
         PDFService<Customer> pdfService = new PDFService<>();
         //Define the arrays to print
         String[] headerArray = {"First Name", "Last Name", "Email", "Join Date"};
         //Define their width
         float[] headerWidth = {1, 1, 1, 1};
-        //Get the data
+        //Get the data from DB
         List<Customer> customers =  customerService.findAll();
-        //And print! :)
+
         try {
-            pdfService.printTablePDF("reports/customers.pdf", headerArray, headerWidth, customers);
-            showMessage("PDF Printed", "The PDF was printed successfully");
+            //Print the PDF and store it in the reports folder
+            pdfService.printTablePDF(destination, headerArray, headerWidth, customers);
+
+            //Take the generated PDF file and return it as a byte array
+            Path path = Paths.get("reports/customers.pdf");
+            byte[] pdfBytes = Files.readAllBytes(path);
+            return pdfBytes;
+
         } catch (IOException e) {
-            e.printStackTrace();
-            showError("PDF Error","Couldn't print PDF report. Please try again. " +
-                                                     "If problem persists, please contact support.");
+            throw e;
         }
+    }
+
+    /**
+     * Opens a download windows to download the given file
+     * @param toDownload
+     */
+    public void downloadExportFile(byte[] toDownload) {
+        StreamResource.StreamSource source = new StreamResource.StreamSource() {
+            @Override
+            public InputStream getStream() {
+                return new ByteArrayInputStream(toDownload);
+            }
+        };
+        // by default getStream always returns new DownloadStream. Which is weird because it makes setting stream parameters impossible.
+        // It seems to be working before in earlier versions of Vaadin. We'll override it.
+        StreamResource resource = new StreamResource(source, "reports/customers.pdf") {
+            DownloadStream downloadStream;
+            @Override
+            public DownloadStream getStream() {
+                if (downloadStream==null)
+                    downloadStream = super.getStream();
+                return downloadStream;
+            }
+        };
+        resource.getStream().setParameter("Content-Disposition","attachment;filename=\"reports/customers.pdf\""); // or else browser will try to open resource instead of download it
+        resource.getStream().setParameter("Content-Type","application/octet-stream");
+        resource.getStream().setCacheTime(0);
+        ResourceReference ref = new ResourceReference(resource, this, "download");
+        this.setResource("download", resource); // now it's available for download
+        Page.getCurrent().open(ref.getURL(), null);
     }
 
 }

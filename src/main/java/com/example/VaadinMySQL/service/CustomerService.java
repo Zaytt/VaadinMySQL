@@ -23,7 +23,6 @@ public class CustomerService {
     @Autowired
     private NamedParameterJdbcTemplate namedTemplate;
 
-
     public List<Customer> findAll() {
         return jdbcTemplate.query(
                 "SELECT * FROM customer",

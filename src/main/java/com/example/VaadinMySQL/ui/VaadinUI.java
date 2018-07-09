@@ -2,6 +2,7 @@ package com.example.VaadinMySQL.ui;
 
 import com.example.VaadinMySQL.model.Customer;
 import com.example.VaadinMySQL.service.CustomerService;
+import com.example.VaadinMySQL.service.ExcelService;
 import com.example.VaadinMySQL.service.PDFService;
 import com.vaadin.icons.VaadinIcons;
 import com.vaadin.server.*;
@@ -9,11 +10,9 @@ import com.vaadin.shared.ui.ValueChangeMode;
 import com.vaadin.spring.annotation.SpringUI;
 import com.vaadin.ui.*;
 import com.vaadin.ui.themes.ValoTheme;
-import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -127,15 +126,13 @@ public class VaadinUI extends UI {
         Button pdfButton = new Button("PDF");
         pdfButton.setIcon(VaadinIcons.FILE_TEXT_O);
         pdfButton.setStyleName("danger");
-        pdfButton.addClickListener(event -> this.printPDF());
+        pdfButton.addClickListener(event -> downloadReport("customers", "pdf"));
 
         // Add a generate excel file button
         Button excelButton = new Button("Excel");
         excelButton.setIcon(VaadinIcons.FILE_TABLE);
         excelButton.setStyleName("friendly");
-        excelButton.addClickListener(event -> {
-            //TODO function to print an Excel file
-        });
+        excelButton.addClickListener(event -> downloadReport("customers", "excel"));
 
         // Make the toolbar
         HorizontalLayout bottomToolbar = new HorizontalLayout(pdfButton, excelButton);
@@ -198,61 +195,89 @@ public class VaadinUI extends UI {
                 .show(Page.getCurrent());
     }
 
+    private void downloadReport(String name, String fileType){
+        String filepath;
+        //Evaluate if PDF or Excel and generate accordingly
+        if(fileType.compareTo("pdf") == 0){
+            generatePDF(name);
+             filepath = "reports/pdf/"+name+".pdf";
+        } else{
+            generateExcel(name);
+            filepath = "reports/excel/"+name+".xlsx";
+        }
+        //Download it
+        downloadFile(filepath);
+    }
 
-    /**
-     * Calls the required methods to build and print a pdf file
-     */
-
-    private void printPDF() {
-        // preparing the data an calling the method to turn it into a byte array
-        byte[] toPrint = new byte[0];
+    private void downloadFile(String path){
+        byte[] fileToPrint = new byte[0];
         try {
-            toPrint = preparePDF();
+            fileToPrint = fileToByteArray(path);
+            // toPrint has the data containing the file
+            downloadExportFile(fileToPrint, path);
         } catch (IOException e) {
             e.printStackTrace();
-            showError("PDF Error","Couldn't print PDF report. Please try again. " +
-                    "If problem persists, please contact support.");
+            showError("File not found","Couldn't find file to download.");
         }
-        // toPrint has the data containing the pdf file
-        downloadExportFile(toPrint);
     }
 
     /**
-     * Builds a PDF file and returns it as a byte array
-     * @return
-     * @throws IOException
+     * Generates an excel file with the given name on the reports/excel directory
+     * @param name
      */
-    private byte[] preparePDF() throws IOException {
-        //Set file destination
-        String destination = "reports/customers.pdf";
-        //Define a PDFService that uses the Customer class
-        PDFService<Customer> pdfService = new PDFService<>();
-        //Define the arrays to print
-        String[] headerArray = {"First Name", "Last Name", "Email", "Join Date"};
-        //Define their width
-        float[] headerWidth = {1, 1, 1, 1};
-        //Get the data from DB
-        List<Customer> customers =  customerService.findAll();
+    private void generateExcel(String name){
+        String filePath = "reports/excel/"+name+".xlsx"; //Set the destination for the file
+        ExcelService<Customer> excelService = new ExcelService<>(); //Create a excel service for the Customer class
+        String[] headerArray = {"First Name", "Last Name", "Email", "Join Date"}; //Define the table headers
+        List<Customer> customers =  customerService.findAll(); //Get the data from DB
+        try {
+            //Generate the excel file
+            excelService.createExcelFile(name, headerArray, customers);
+        } catch (IOException e) {
+            e.printStackTrace();
+            showError("Excel Error","Couldn't generate excel report. Please try again. " +
+                    "If problem persists, please contact support.");
+        }
+    }
 
+    /**
+     * Generates a PDF file with the given name
+     * @param name
+     */
+    private void generatePDF(String name){
+        String destination = "reports/pdf/"+name+".pdf"; //Define the file destination path
+        PDFService<Customer> pdfService = new PDFService<>(); //Define a PDFService that uses the Customer class
+        String[] headerArray = {"First Name", "Last Name", "Email", "Join Date"}; //Define the arrays to print
+        float[] headerWidth = {1, 1, 1, 1}; //Define their width
+        List<Customer> customers =  customerService.findAll(); //Get the data from DB
         try {
             //Print the PDF and store it in the reports folder
             pdfService.printTablePDF(destination, headerArray, headerWidth, customers);
-
-            //Take the generated PDF file and return it as a byte array
-            Path path = Paths.get("reports/customers.pdf");
-            byte[] pdfBytes = Files.readAllBytes(path);
-            return pdfBytes;
-
         } catch (IOException e) {
-            throw e;
+            e.printStackTrace();
+            showError("PDF Error","Couldn't generate pdf report. Please try again. " +
+                    "If problem persists, please contact support.");
         }
     }
 
     /**
-     * Opens a download windows to download the given file
-     * @param toDownload
+     * Converts a file to a byte array.
+     * @param filePath the location of the file
+     * @return the file as a byte array
+     * @throws IOException
      */
-    public void downloadExportFile(byte[] toDownload) {
+    private byte[] fileToByteArray(String filePath) throws IOException {
+        //Take the generated PDF file and return it as a byte array
+        Path path = Paths.get(filePath);
+        byte[] pdfBytes = Files.readAllBytes(path);
+        return pdfBytes;
+    }
+    /**
+     * Opens a dialog to download a file.
+     * @param toDownload the file as a byte array
+     * @param path the location of the file
+     */
+    public void downloadExportFile(byte[] toDownload, String path) {
         StreamResource.StreamSource source = new StreamResource.StreamSource() {
             @Override
             public InputStream getStream() {
@@ -261,7 +286,7 @@ public class VaadinUI extends UI {
         };
         // by default getStream always returns new DownloadStream. Which is weird because it makes setting stream parameters impossible.
         // It seems to be working before in earlier versions of Vaadin. We'll override it.
-        StreamResource resource = new StreamResource(source, "reports/customers.pdf") {
+        StreamResource resource = new StreamResource(source, path) {
             DownloadStream downloadStream;
             @Override
             public DownloadStream getStream() {
@@ -270,7 +295,7 @@ public class VaadinUI extends UI {
                 return downloadStream;
             }
         };
-        resource.getStream().setParameter("Content-Disposition","attachment;filename=\"reports/customers.pdf\""); // or else browser will try to open resource instead of download it
+        resource.getStream().setParameter("Content-Disposition","attachment;filename=\""+path+"\""); // or else browser will try to open resource instead of download it
         resource.getStream().setParameter("Content-Type","application/octet-stream");
         resource.getStream().setCacheTime(0);
         ResourceReference ref = new ResourceReference(resource, this, "download");
